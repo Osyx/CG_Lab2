@@ -118,11 +118,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\..\..\Skolan\Datorgrafik med Interaktion (DH2323)\CgLab2\SDLauxiliary.h" />
-    <ClInclude Include="..\..\..\..\..\Skolan\Datorgrafik med Interaktion (DH2323)\CgLab2\TestModel.h" />
+    <ClCompile Include="Source.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\..\Skolan\Datorgrafik med Interaktion (DH2323)\CgLab2\Source.cpp" />
+    <ClInclude Include="SDLauxiliary.h" />
+    <ClInclude Include="TestModel.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
