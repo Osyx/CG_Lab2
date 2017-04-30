@@ -30,6 +30,7 @@ vec3 cameraPos(0, 0, -2);
 vec3 right(R[0][0], R[0][1], R[0][2]);
 vec3 down(R[1][0], R[1][1], R[1][2]);
 vec3 forward(R[2][0], R[2][1], R[2][2]);
+vec3 indirectLightColor = 0.5f * vec3(1, 1, 1);
 vec3 lightPos(0, -0.5, -0.7);
 vec3 lightColor = 14.f * vec3(1, 1, 1);
 std::vector<Triangle> triangles;
@@ -37,6 +38,7 @@ std::vector<Triangle> triangles;
 bool closestIntersection(vec3 start, vec3 dir, const std::vector<Triangle>& triangles, Intersection& closestIntersection);
 vec3 directLight(const Intersection& i);
 void draw();
+vec3 indirectLight(const Intersection& i);
 vec3 intersection(Triangle triangle, vec3 s, vec3 d);
 void rotateCamera();
 void update();
@@ -80,6 +82,16 @@ vec3 directLight(const Intersection& i) {
 	vec3 n_hat = triangles[i.triangleIndex].normal;
 	vec3 r_hat = glm::normalize(lightPos - i.position);
 	float r = glm::length(lightPos - i.position);
+
+	Intersection shadow;
+	vec3 shadowDir = glm::normalize(i.position - lightPos);
+	if (closestIntersection(lightPos, shadowDir, triangles, shadow)) {
+		// Without this if statement, there seems to be some sort of rounding error, that causes everything to be shadows.
+		if (shadow.distance < r - 0.00001f) {
+			return vec3(0, 0, 0);
+		}
+	}
+
 	vec3 returnVec = lightColor * std::max(glm::dot(r_hat, n_hat), 0.0f) / (4.0f * PI * pow(r, 2.0f));
 	return returnVec;
 }
@@ -96,8 +108,7 @@ void draw() {
 			vec3 d(x - SCREEN_WIDTH / 2, y - SCREEN_HEIGHT / 2, focalLength);
 			d = R * d;
 			if (closestIntersection(cameraPos, d, triangles, closestInt)) {
-				/*color = triangles[closestInt.triangleIndex].color;*/
-				color = triangles[closestInt.triangleIndex].color * directLight(closestInt);
+				color = triangles[closestInt.triangleIndex].color * indirectLight(closestInt);
 			}
 			PutPixelSDL(screen, x, y, color);
 		}
@@ -107,6 +118,10 @@ void draw() {
 		SDL_UnlockSurface(screen);
 
 	SDL_UpdateRect(screen, 0, 0, 0, 0);
+}
+
+vec3 indirectLight(const Intersection& i) {
+	return directLight(i) + indirectLightColor;
 }
 
 vec3 intersection(Triangle triangle, vec3 s, vec3 d) {
