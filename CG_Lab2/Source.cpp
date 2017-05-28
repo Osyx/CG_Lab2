@@ -6,8 +6,6 @@
 #include <algorithm>
 #include <cmath>
 
-//using namespace std;
-
 using glm::vec3;
 using glm::mat3;
 
@@ -17,8 +15,8 @@ struct Intersection {
 	int triangleIndex;
 };
 
-const int SCREEN_WIDTH = 500;
-const int SCREEN_HEIGHT = 500;
+const int SCREEN_WIDTH = 50;
+const int SCREEN_HEIGHT = 50;
 float focalLength = SCREEN_HEIGHT / 2;
 float m = std::numeric_limits<float>::max();
 float PI = acos(-1);
@@ -26,7 +24,8 @@ float yaw = 0;
 int t;
 mat3 R = mat3(vec3(1.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), vec3(0.0f, 0.0f, 1.0f));
 SDL_Surface* screen;
-vec3 cameraPos(0, 0, -2);
+vec3 orgCameraPos(0.0f, 0.0f, -2.0f);
+vec3 cameraPos(0.0f, 0.0f, -2.0f);
 vec3 right(R[0][0], R[0][1], R[0][2]);
 vec3 down(R[1][0], R[1][1], R[1][2]);
 vec3 forward(R[2][0], R[2][1], R[2][2]);
@@ -63,15 +62,15 @@ bool closestIntersection(vec3 start, vec3 dir, const std::vector<Triangle>& tria
 	float distance = m;
 	bool intersected = false;
 	vec3 temp;
-	for (size_t i = 0; i < triangles.size(); ++i) {
+	for (int i = 0; i < triangles.size(); ++i) {
 		temp = intersection(triangles[i], start, dir);
 		if (0 <= temp.x && temp.x <= distance && 0 <= temp.y && 0 <= temp.z && temp.y + temp.z <= 1) {
 			if (!intersected)
 				intersected = true;
-			/*distance = sqrt((temp.x - start.x) + (temp.y - start.y) + (temp.z - start.z));*/
+			
 			distance = temp.x;
 			closestIntersection.position = start + temp.x * dir;
-			closestIntersection.distance = glm::distance(start + temp.x * dir, start);
+			closestIntersection.distance = glm::distance(closestIntersection.position, start);
 			closestIntersection.triangleIndex = i;
 		}
 	}
@@ -83,17 +82,18 @@ vec3 directLight(const Intersection& i) {
 	vec3 r_hat = glm::normalize(lightPos - i.position);
 	float r = glm::length(lightPos - i.position);
 
+	// Shadow
 	Intersection shadow;
 	vec3 shadowDir = glm::normalize(i.position - lightPos);
 	if (closestIntersection(lightPos, shadowDir, triangles, shadow)) {
-		// Without this if statement, there seems to be some sort of rounding error, that causes everything to be shadows.
+		// Without subtracting a small number, there seems to be some sort of rounding error, that causes everything to be shadows.
 		if (shadow.distance < r - 0.00001f) {
 			return vec3(0, 0, 0);
 		}
 	}
+	// End shadow
 
-	vec3 returnVec = lightColor * std::max(glm::dot(r_hat, n_hat), 0.0f) / (4.0f * PI * pow(r, 2.0f));
-	return returnVec;
+	return lightColor * std::max(glm::dot(r_hat, n_hat), 0.0f) / (4.0f * PI * pow(r, 2.0f));
 }
 
 
@@ -137,6 +137,9 @@ void rotateCamera() {
 	vec3 b(0, 1, 0);
 	vec3 c(sin(yaw), 0, cos(yaw));
 	R = mat3(a, b, c);
+	right = vec3(R[0][0], R[0][1], R[0][2]);
+	down = vec3(R[1][0], R[1][1], R[1][2]);
+	forward = vec3(R[2][0], R[2][1], R[2][2]);
 }
 
 void update() {
@@ -147,18 +150,20 @@ void update() {
 	std::cout << "Render time: " << dt << " ms." << std::endl;
 	Uint8* keystate = SDL_GetKeyState(0);
 	if (keystate[SDLK_UP]) {
-		cameraPos += vec3(0, 0, 0.2f);
+		cameraPos += forward;
 	}
 	if (keystate[SDLK_DOWN]) {
-		cameraPos -= vec3(0, 0, 0.2f);
+		cameraPos -= forward;
 	}
 	if (keystate[SDLK_LEFT]) {
 		yaw -= 0.03f;
 		rotateCamera();
+		cameraPos -= right;
 	}
 	if (keystate[SDLK_RIGHT]) {
 		yaw += 0.03f;
 		rotateCamera();
+		cameraPos += right;
 	}
 	if (keystate[SDLK_w]) {
 		lightPos += forward;
